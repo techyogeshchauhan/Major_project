@@ -1,0 +1,418 @@
+<!-- base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Edunexa{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSRF Token for Forms (if using Flask-WTF) -->
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token() else '' }}">
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/" class="text-xl font-bold">Edunexa</a>
+            <div>
+                {% if user.is_authenticated %}
+                    <span class="mr-4">Welcome, {{ user.name }}</span>
+                    <a href="/auth/profile" class="mr-4">Profile</a>
+                    <a href="/auth/logout" class="mr-4">Logout</a>
+                {% else %}
+                    <a href="/auth/login" class="mr-4">Login</a>
+                    <a href="/auth/register" class="mr-4">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 mt-auto text-center">
+        <p>&copy; 2025 Edunexa. All rights reserved.</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // CSRF Token for AJAX requests
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }
+    </script>
+</body>
+</html>
+
+<!-- profile.html -->
+{% extends "base.html" %}
+{% block title %}Profile - Edunexa{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8">
+    <!-- Header -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
+            <p class="text-sm text-gray-600 mt-1">Manage your account settings and preferences</p>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+        <!-- Profile Sidebar -->
+        <div class="md:col-span-1">
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="text-center">
+                    <!-- Profile Picture -->
+                    <div class="mx-auto h-24 w-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4">
+                        {% if user.profile_image %}
+                            <img class="h-24 w-24 rounded-full object-cover" src="{{ user.profile_image }}" alt="Profile">
+                        {% else %}
+                            <span class="text-2xl font-bold text-white">{{ user.name[0].upper() }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <h3 class="text-lg font-medium text-gray-900">{{ user.name }}</h3>
+                    <p class="text-sm text-gray-500 capitalize">{{ user.role }}</p>
+                    <p class="text-sm text-gray-500 mt-1">{{ user.email }}</p>
+                    
+                    <!-- Role Badge -->
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                        {% if user.role == 'admin' %}bg-red-100 text-red-800
+                        {% elif user.role == 'instructor' %}bg-blue-100 text-blue-800
+                        {% else %}bg-green-100 text-green-800{% endif %} mt-2">
+                        {{ user.role.title() }}
+                    </span>
+                </div>
+                
+                <div class="mt-6 space-y-4">
+                    <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors" 
+                            onclick="document.getElementById('profile-image-input').click()">
+                        Change Photo
+                    </button>
+                    <input type="file" id="profile-image-input" accept="image/*" class="hidden" onchange="uploadProfileImage(event)">
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="bg-white shadow rounded-lg p-6 mt-6">
+                <h4 class="text-sm font-medium text-gray-900 mb-4">Account Stats</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Member since</span>
+                        <span class="text-sm font-medium text-gray-900">{{ user.created_at.strftime('%B %Y') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Total chats</span>
+                        <span class="text-sm font-medium text-gray-900">{{ user.chat_count or 0 }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Courses enrolled</span>
+                        <span class="text-sm font-medium text-gray-900">{{ user.course_count or 0 }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Profile completion</span>
+                        <span class="text-sm font-medium text-green-600">{{ user.profile_completion or '75%' }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Profile Content -->
+        <div class="md:col-span-2 space-y-6">
+            <!-- Personal Information -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Personal Information</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <form method="POST" action="/auth/profile/update" enctype="multipart/form-data">
+                        {{ form.hidden_tag() if form else '' }} <!-- CSRF protection -->
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                                <input type="text" id="name" name="name" value="{{ user.name }}" required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                                <input type="email" id="email" name="email" value="{{ user.email }}" readonly
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500">
+                                <p class="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                            <textarea id="bio" name="bio" rows="4" 
+                                      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="Tell us about yourself...">{{ user.bio or '' }}</textarea>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button type="submit" 
+                                    class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                                Update Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Change Password</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <form method="POST" action="/auth/password/change">
+                        {{ form.hidden_tag() if form else '' }} <!-- CSRF protection -->
+                        <div class="space-y-4">
+                            <div>
+                                <label for="current_password" class="block text-sm font-medium text-gray-700">Current Password</label>
+                                <input type="password" id="current_password" name="current_password" required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="new_password" class="block text-sm font-medium text-gray-700">New Password</label>
+                                <input type="password" id="new_password" name="new_password" required minlength="6"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="confirm_new_password" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                                <input type="password" id="confirm_new_password" name="confirm_new_password" required minlength="6"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button type="submit" 
+                                    class="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                                Change Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preferences -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Preferences</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <form method="POST" action="/auth/preferences/update">
+                        {{ form.hidden_tag() if form else '' }} <!-- CSRF protection -->
+                        <div class="space-y-4">
+                            <!-- Email Notifications -->
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700">Email Notifications</label>
+                                    <p class="text-sm text-gray-500">Receive updates about your courses and activities</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="email_notifications" class="sr-only peer" {% if user.email_notifications %}checked{% endif %}>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500 peer-focus:ring-opacity-30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <!-- AI Suggestions -->
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700">AI Learning Suggestions</label>
+                                    <p class="text-sm text-gray-500">Get personalized course and content recommendations</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="ai_suggestions" class="sr-only peer" {% if user.ai_suggestions %}checked{% endif %}>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500 peer-focus:ring-opacity-30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <!-- Dark Mode -->
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700">Dark Mode</label>
+                                    <p class="text-sm text-gray-500">Switch to dark theme for better viewing</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="dark_mode" class="sr-only peer" {% if user.dark_mode %}checked{% endif %}>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500 peer-focus:ring-opacity-30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button type="submit" 
+                                    class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                                Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Account Actions -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Account Actions</h3>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+                        <div>
+                            <h4 class="text-sm font-medium text-yellow-800">Download Your Data</h4>
+                            <p class="text-sm text-yellow-600">Export all your learning data and chat history</p>
+                        </div>
+                        <button class="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors text-sm"
+                                onclick="downloadData()">
+                            Download
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                        <div>
+                            <h4 class="text-sm font-medium text-red-800">Delete Account</h4>
+                            <p class="text-sm text-red-600">Permanently delete your account and all data</p>
+                        </div>
+                        <button class="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors text-sm"
+                                onclick="confirmAccountDeletion()">
+                            Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Confirmation Modal -->
+<div id="deleteAccountModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-4">Delete Account</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">
+                    This action cannot be undone. All your data, courses, and chat history will be permanently deleted.
+                </p>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="confirmDelete" 
+                        class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 mb-2">
+                    Yes, Delete My Account
+                </button>
+                <button id="cancelDelete" 
+                        class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function uploadProfileImage(event) {
+    const input = event.target;
+    const file = input.files[0];
+    
+    if (file) {
+        const formData = new FormData();
+        formData.append('profile_image', file);
+        
+        fetch('/auth/profile/upload-image', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error uploading image: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error uploading image: ' + error.message);
+        });
+    }
+    input.value = ''; // Reset input to allow re-upload of same file
+}
+
+function downloadData() {
+    fetch('/auth/data/export', {
+        method: 'GET',
+        headers: {
+            'X-CSRF-Token': getCsrfToken()
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'edunexa_data_export.zip';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        alert('Error downloading data: ' + error.message);
+    });
+}
+
+function confirmAccountDeletion() {
+    document.getElementById('deleteAccountModal').classList.remove('hidden');
+}
+
+document.getElementById('cancelDelete').addEventListener('click', function() {
+    document.getElementById('deleteAccountModal').classList.add('hidden');
+});
+
+document.getElementById('confirmDelete').addEventListener('click', function() {
+    fetch('/auth/account/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/';
+        } else {
+            alert('Error deleting account: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error deleting account: ' + error.message);
+    });
+});
+
+// Password confirmation validation
+document.addEventListener('DOMContentLoaded', function() {
+    const newPassword = document.getElementById('new_password');
+    const confirmNewPassword = document.getElementById('confirm_new_password');
+    
+    function validatePassword() {
+        if (confirmNewPassword.value !== newPassword.value) {
+            confirmNewPassword.setCustomValidity("Passwords don't match");
+        } else {
+            confirmNewPassword.setCustomValidity('');
+        }
+    }
+    
+    newPassword.addEventListener('change', validatePassword);
+    confirmNewPassword.addEventListener('keyup', validatePassword);
+});
+</script>
+{% endblock %}
