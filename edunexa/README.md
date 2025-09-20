@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Edunexa Logo](https://via.placeholder.com/200/4F46E5/FFFFFF?text=EDUNEXA)
+![Edunexa Logo](one.png)
 
 **Revolutionizing Education Through AI-Powered Personalized Learning**
 
