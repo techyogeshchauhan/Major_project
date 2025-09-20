@@ -149,7 +149,7 @@ Edunexa is a cutting-edge **AI-powered educational technology platform** that tr
 
 ## 🏗️ System Architecture
  
-![Hello Image](piu.png)
+![Hello Image](diagram-export-9-20-2025-10_28_01-PM.png)
 
 ### 🔧 Architecture Principles
 
