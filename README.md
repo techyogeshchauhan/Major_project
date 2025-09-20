@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Edunexa Logo](diagram-export-9-20-2025-10_28_01-PM.png)
+![Edunexa Logo](one.png)
 
 **Revolutionizing Education Through AI-Powered Personalized Learning**
 
