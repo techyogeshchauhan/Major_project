@@ -1,3 +1,4 @@
+<img width="1024" height="1024" alt="one" src="https://github.com/user-attachments/assets/caea978e-7ed2-4f0a-a4d2-749fc7a2cbc9" />
 # 🎓 Edunexa: AI-Powered EdTech Platform
 
 <div align="center">
